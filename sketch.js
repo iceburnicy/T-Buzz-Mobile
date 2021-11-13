@@ -1,0 +1,226 @@
+var buzz,buzz_img,buzz_crouch,buzz_lose;
+var bordas;
+var chao,chao_img;
+var invchao;
+var cloud,cloud_img;
+var spike;
+var points=0;
+var cloudg,spikeg;
+var START=1;
+var END=0;
+var state = START;
+var fim,fim_img;
+var restart,restart_img;
+var bird,bird_img;
+var dies,checkpoints,jumps;
+
+function preload(){
+  //pre carrega os arquivos do jogo
+  
+  buzz_img = loadAnimation("trex1.png","trex3.png","trex4.png");
+  chao_img = loadImage("ground2.png");
+  cloud_img = loadImage("cloud.png");
+  buzz_crouch = loadAnimation("trex_low1.png","trex_low2.png");
+  buzz_lose = loadImage("trex_collided.png");
+  
+  spike1=loadImage("obstacle1.png");
+  spike2=loadImage("obstacle2.png");
+  spike3=loadImage("obstacle3.png");
+  spike4=loadImage("obstacle4.png");
+  spike5=loadImage("obstacle5.png");
+  spike6=loadImage("obstacle6.png");
+  
+  fim_img=loadImage("gameOver.png");
+  
+  restart_img=loadImage("restart.png");
+  
+  bird_img=loadAnimation("bird1.png","bird1.png","bird2.png","bird2.png");
+  
+  dies=loadSound("die.mp3");
+  checkpoints=loadSound("checkPoint.mp3");
+  jumps=loadSound("jump.mp3");
+}
+
+function setup(){
+  //funcao de configuração
+  
+ createCanvas(windowWidth,windowHeight);
+  
+  //configuração do buzz
+  buzz = createSprite(50,height-50,20,20);
+  buzz.addAnimation("running",buzz_img);
+  buzz.addAnimation("crouching",buzz_crouch);
+  buzz.addAnimation("lose",buzz_lose);
+  buzz.scale = 0.5;
+  
+  
+  bordas = createEdgeSprites();
+ 
+  chao = createSprite(width/2,height-10,width,20);
+  chao.addImage(chao_img);
+  chao.x=chao.width/2;
+
+  invchao = createSprite(width/2,height-5,width,18);
+  invchao.visible=false;
+
+  //var rand = Math.round(random(1,10));
+  //console.log(rand);
+
+  cloudg=new Group();
+  spikeg=new Group();
+  birdg=new Group();
+  
+  //buzz.debug=true;
+  buzz.setCollider("circle",0,0,30);
+  
+  fim=createSprite(width/2,height/2,60,60);
+  fim.addImage(fim_img);
+  fim.scale=0.6
+  fim.visible=false;
+  
+  restart=createSprite(width/2,height/2+40,60,60);
+  restart.addImage(restart_img);
+  restart.scale=0.8
+  restart.visible=false;
+
+
+}
+
+function draw(){
+  background("white");
+  
+  textSize(18);
+  text("Points: "+points,width-150,height-200);
+
+  
+  //buzz.collide(bordas[3]);
+  buzz.collide(invchao);
+  
+  if(state===START){
+   points=points+Math.round(frameRate()/60);
+  
+   if(points%100===0&&points>0){
+     checkpoints.play();
+   }
+    
+   //pulo do buzz
+   if(touches.length>0&&buzz.isTouching(chao)){
+    buzz.velocityY = -12;
+    jumps.play();
+    touches=[];
+   }
+   clouds();
+   cactus();
+   birds();
+   
+   if(keyDown("down")&&buzz.isTouching(chao)){
+    buzz.changeAnimation("crouching");  
+   }
+   else{
+    buzz.changeAnimation("running");
+   }
+  
+   //gravidade
+   buzz.velocityY = buzz.velocityY + 0.8;
+  
+   chao.velocityX=-(5+points/100);
+  
+   if(chao.x<0){
+    
+    chao.x=chao.width/2;
+   }
+  
+   if(buzz.isTouching(spikeg)||buzz.isTouching(birdg)){
+     state=END;
+     dies.play();
+   }
+  }
+  else if(state===END){
+   chao.velocityX=0;
+   cloudg.setVelocityXEach(0);
+   spikeg.setVelocityXEach(0);
+   birdg.setVelocityXEach(0);
+   buzz.changeAnimation("lose");
+   buzz.velocityY=0;
+   cloudg.setLifetimeEach(-1);
+   spikeg.setLifetimeEach(-1);
+   birdg.setLifetimeEach(-1);
+   fim.visible=true;
+   restart.visible=true;
+   if(touches.length>0){
+    touches=[];
+    reset();
+   }
+  }
+  
+  drawSprites();
+}
+function clouds(){
+  if(frameCount%80===0){
+   cloud=createSprite(width+30,50,30,30);
+   cloud.velocityX=-(2+points/100);
+   cloud.addImage(cloud_img);
+   cloud.scale = (random(0.5,0.8));
+   cloud.y=Math.round(random(height-180,height-100));
+   cloud.depth=buzz.depth;
+   buzz.depth=buzz.depth+1;
+   cloud.lifetime=width+30;
+   
+   cloudg.add(cloud);
+    
+  }
+}
+function cactus(){
+  if(frameCount%65===0){
+    spike=createSprite(width+20,height-25,20,20);
+    spike.velocityX=-(5+points/100);
+    var rand=Math.round(random(1,6));
+    switch(rand){
+      case 1:spike.addImage(spike1); 
+      break;
+      case 2:spike.addImage(spike2);
+      break;
+      case 3: spike.addImage(spike3);
+      break;
+      case 4:spike.addImage(spike4);
+      break;
+      case 5:spike.addImage(spike5);
+      break;
+      case 6:spike.addImage(spike6);
+      break;
+      default:break;
+    }
+    
+    spike.scale=0.5;
+    spike.lifetime=width+30;
+    
+    spikeg.add(spike);
+    
+    spike.depth=buzz.depth;
+    buzz.depth=buzz.depth+1;
+  }
+}
+function birds(){
+  
+  if(frameCount%500===0){
+    bird=createSprite(width+20,height-100,50,50);
+    bird.velocityX=-(5+points/100);
+    bird.addAnimation("bird",bird_img);
+    bird.lifetime=width+30;
+    
+    birdg.add(bird);
+  }
+  
+}
+function reset(){
+  state=START;
+  spikeg.destroyEach();
+  cloudg.destroyEach();
+  birdg.destroyEach();
+  points=0;
+  frameCount=0;
+  
+  restart.visible=false;
+  fim.visible=false;
+  
+}
